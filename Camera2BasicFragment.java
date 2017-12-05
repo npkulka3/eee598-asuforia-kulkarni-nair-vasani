@@ -1,20 +1,12 @@
 /*
- * Copyright 2017 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+This file implements a Camera View on the screen of the device.
+Parts of this code is referred from https://developer.android.com/samples/Camera2Raw/src/com.example.android.camera2raw/Came
+ra2RawFragment.html
+The onClick functionality , Android Permissions and Camera Preview is implemented in this file
+
  */
 
-package com.example.neera.assign_2_cpp;
+package com.example.neera.once_more;
 
 import android.Manifest;
 import android.app.Activity;
@@ -60,9 +52,10 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 //import android.support.v13.app.FragmentCompat;
-
+import android.graphics.Canvas;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -77,10 +70,13 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.opencv.android.Utils;
+import org.opencv.calib3d.Calib3d;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.opencv.core.CvType;
 import org.opencv.core.Core;
+import android.graphics.Paint;
+
 
 public class Camera2BasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
@@ -141,7 +137,7 @@ public class Camera2BasicFragment extends Fragment
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
+     * {@link TextureView}
      */
     private final TextureView.SurfaceTextureListener mSurfaceTextureListener
             = new TextureView.SurfaceTextureListener() {
@@ -210,6 +206,7 @@ public class Camera2BasicFragment extends Fragment
             mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
+
         }
 
         @Override
@@ -249,12 +246,29 @@ public class Camera2BasicFragment extends Fragment
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
      * still image is ready to be saved.
      */
-    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
+    public final ImageReader.OnImageAvailableListener mOnImageAvailableListener
             = new ImageReader.OnImageAvailableListener() {
 
         @Override
-        public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+        public  void onImageAvailable(ImageReader reader) {
+              Image image = reader.acquireLatestImage();
+                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                byte[] imageBytes= new byte[buffer.remaining()];
+                buffer.get(imageBytes);
+
+               Bitmap bmp =BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
+                int height_1 =  bmp.getHeight();
+                Log.d("CHECK------------", height_1+" ");
+
+                image.close();
+           // MainActivity x_new = new MainActivity();
+           // Bitmap ghanta = x_new.bmpIn;
+
+            Bitmap out = MainActivity.getImage_from_C(imageBytes);
+            int height_2 = out.getHeight();
+            Log.d("CHECK----22222------",height_2+"");
+
+            //R.getViewbyId()
         }
 
     };
@@ -301,12 +315,15 @@ public class Camera2BasicFragment extends Fragment
             switch (mState) {
                 case STATE_PREVIEW: {
                     // We have nothing to do when the camera preview is working normally.
+                   // mPreviewRequestBuilder.addTarget(mImageReader.getSurface());
+
+
                     break;
                 }
                 case STATE_WAITING_LOCK: {
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     if (afState == null) {
-                        //captureStillPicture();
+                        captureStillPicture();
                     } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
                             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
                         // CONTROL_AE_STATE can be null on some devices
@@ -314,7 +331,7 @@ public class Camera2BasicFragment extends Fragment
                         if (aeState == null ||
                                 aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
                             mState = STATE_PICTURE_TAKEN;
-                          //  captureStillPicture();
+                           captureStillPicture();
                         } else {
                             runPrecaptureSequence();
                         }
@@ -359,6 +376,7 @@ public class Camera2BasicFragment extends Fragment
 
     };
 
+
     /**
      * Shows a {@link Toast} on the UI thread.
      *
@@ -377,19 +395,6 @@ public class Camera2BasicFragment extends Fragment
     }
 
     /**
-     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
-     * is at least as large as the respective texture view size, and that is at most as large as the
-     * respective max size, and whose aspect ratio matches with the specified value. If such size
-     * doesn't exist, choose the largest one that is at most as large as the respective max size,
-     * and whose aspect ratio matches with the specified value.
-     *
-     * @param choices           The list of sizes that the camera supports for the intended output
-     *                          class
-     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
-     * @param textureViewHeight The height of the texture view relative to sensor coordinate
-     * @param maxWidth          The maximum width that can be chosen
-     * @param maxHeight         The maximum height that can be chosen
-     * @param aspectRatio       The aspect ratio
      * @return The optimal {@code Size}, or an arbitrary one if none were big enough
      */
     private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
@@ -437,6 +442,8 @@ public class Camera2BasicFragment extends Fragment
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
+        Button b = (Button) view.findViewById(R.id.fab);
+        b.setOnClickListener(this);
         Button c = (Button) view.findViewById(R.id.fab_1);
         c.setOnClickListener(this);
         //view.findViewById(R.id.info).setOnClickListener(this);
@@ -495,11 +502,7 @@ public class Camera2BasicFragment extends Fragment
 
     /**
      * Sets up member variables related to camera.
-     *
-     * @param width  The width of available size for camera preview
-     * @param height The height of available size for camera preview
      */
-    @SuppressWarnings("SuspiciousNameCombination")
     private void setUpCameraOutputs(int width, int height) {
         Activity activity = getActivity();
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
@@ -608,6 +611,7 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
+
     /**
      * Opens the camera specified by {@link Camera2BasicFragment#mCameraId}.
      */
@@ -668,7 +672,7 @@ public class Camera2BasicFragment extends Fragment
     }
 
     /**
-     * Stops the background thread and its {@link Handler}.
+     * Stops the background thread and its Handler.
      */
     private void stopBackgroundThread() {
         mBackgroundThread.quitSafely();
@@ -682,14 +686,14 @@ public class Camera2BasicFragment extends Fragment
     }
 
     /**
-     * Creates a new {@link CameraCaptureSession} for camera preview.
+     * Creates a new  CameraCaptureSession for camera preview.
      */
     private void createCameraPreviewSession() {
         try {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
 
-            // We configure the size of default buffer to be the size of camera preview we want.
+            // The size of default buffer to be the size of camera preview we want.
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
             // This is the output Surface we need to start preview.
@@ -699,6 +703,8 @@ public class Camera2BasicFragment extends Fragment
             mPreviewRequestBuilder
                     = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
+           // mPreviewRequestBuilder.addTarget(surface);
+            mPreviewRequestBuilder.addTarget(mImageReader.getSurface());
 
             // Here, we create a CameraCaptureSession for camera preview.
             mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
@@ -711,16 +717,12 @@ public class Camera2BasicFragment extends Fragment
                                 return;
                             }
 
-                            // When the session is ready, we start displaying the preview.
                             mCaptureSession = cameraCaptureSession;
                             try {
-                                // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                // Flash is automatically enabled when necessary.
                                 setAutoFlash(mPreviewRequestBuilder);
 
-                                // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
                                 mCaptureSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
@@ -741,14 +743,6 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    /**
-     * Configures the necessary {@link android.graphics.Matrix} transformation to `mTextureView`.
-     * This method should be called after the camera preview size is determined in
-     * setUpCameraOutputs and also the size of `mTextureView` is fixed.
-     *
-     * @param viewWidth  The width of `mTextureView`
-     * @param viewHeight The height of `mTextureView`
-     */
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = getActivity();
         if (null == mTextureView || null == mPreviewSize || null == activity) {
@@ -815,19 +809,53 @@ public class Camera2BasicFragment extends Fragment
             e.printStackTrace();
         }
     }
-
-
-    /**
-     * Retrieves the JPEG orientation from the specified screen rotation.
-     *
-     * @param rotation The screen rotation.
-     * @return The JPEG orientation (one of 0, 90, 270, and 360)
+	
+	   /**
+     * Capture a still picture. This method should be called when we get a response in
+     * {@link #mCaptureCallback} from both {@link #lockFocus()}.
      */
+    private void captureStillPicture() {
+        try {
+            final Activity activity = getActivity();
+            if (null == activity || null == mCameraDevice) {
+                return;
+            }
+            // This is the CaptureRequest.Builder that we use to take a picture.
+            final CaptureRequest.Builder captureBuilder =
+                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(mImageReader.getSurface());
+
+            // Use the same AE and AF modes as the preview.
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            setAutoFlash(captureBuilder);
+
+            // Orientation
+            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+
+            CameraCaptureSession.CaptureCallback CaptureCallback
+                    = new CameraCaptureSession.CaptureCallback() {
+
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session,
+                                               @NonNull CaptureRequest request,
+                                               @NonNull TotalCaptureResult result) {
+                    showToast("Saved: " + mFile);
+                    Log.d(TAG, mFile.toString());
+                    unlockFocus();
+                }
+            };
+
+            mCaptureSession.stopRepeating();
+            mCaptureSession.abortCaptures();
+            mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
     private int getOrientation(int rotation) {
-        // Sensor orientation is 90 for most devices, or 270 for some devices (eg. Nexus 5X)
-        // We have to take that into account and rotate JPEG properly.
-        // For devices with orientation of 90, we simply return our mapping from ORIENTATIONS.
-        // For devices with orientation of 270, we need to rotate the JPEG 180 degrees.
         return (ORIENTATIONS.get(rotation) + mSensorOrientation + 270) % 360;
     }
 
@@ -851,7 +879,7 @@ public class Camera2BasicFragment extends Fragment
             e.printStackTrace();
         }
     }
-
+        //button to show the OpenCV version on the screec
     @Override
     public void onClick(View view) {
         //Context context = getActivity();
@@ -859,6 +887,10 @@ public class Camera2BasicFragment extends Fragment
        // Toast toast = Toast.makeText(context,text).show();
         //showToast("LOLOLOLOL");
         switch (view.getId()) {
+			case R.id.fab: {
+                takePicture();
+                break;
+            }
             case R.id.fab_1:{
                 try {
                     showImage();
@@ -870,7 +902,7 @@ public class Camera2BasicFragment extends Fragment
 
         }
     }
-
+        // function to show the OpenCV version on the screen
     private void showImage() throws FileNotFoundException {
         //showToast("are we there yet");
             //FileInputStream f1 = new FileInputStream(new File("/storage/emulated/0/Android/data/com.example.neera.assign_2/files/pic.jpg") );
@@ -924,6 +956,7 @@ public class Camera2BasicFragment extends Fragment
                 if (null != output) {
                     try {
                         output.close();
+
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
