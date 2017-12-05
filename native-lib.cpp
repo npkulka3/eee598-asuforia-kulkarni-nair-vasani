@@ -18,7 +18,7 @@
 
 extern "C" {
 JNIEXPORT jintArray JNICALL
-Java_com_example_neera_once_1more_MainActivity_getImage(
+Java_com_example_neera_once_1more_ASUForia_nativePoseExtimation(
         JNIEnv *env,
         jobject This,
         jintArray pixels_,
