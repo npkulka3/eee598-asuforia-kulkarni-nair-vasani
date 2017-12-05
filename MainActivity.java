@@ -35,7 +35,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 public class MainActivity extends AppCompatActivity {
 
 
-    ASUForia asuForia;
+    static ASUForia asuForia;
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
@@ -53,23 +53,24 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
 
         }
-        // Bitmap bmpIn;
 
-        //  BitmapFactory.Options opts = new BitmapFactory.Options();
-        //  opts.inPreferredConfig = Bitmap.Config.ARGB_8888; // Each pixel is 4 bytes: Alpha, Red, Green, Blue
-        //  bmpIn = BitmapFactory.decodeResource(getResources(), R.drawable.vuforia, opts);
+
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inPreferredConfig = Bitmap.Config.ARGB_8888; // Each pixel is 4 bytes: Alpha, Red, Green, Blue
+        bmpIn = BitmapFactory.decodeResource(getResources(), R.drawable.vuforia, opts);
         //    int h_t = bmpIn.getWidth();
         //string = getPackageCodePath();
 
 
-        final ASUForia.PoseListener myPoseListen = new ASUForia.PoseListener() {
+        final ASUForia.PoseListener new_PoseListen = new ASUForia.PoseListener() {
             @Override
             public void onPose(Image cam_Frame, float[] rvec, float[] tvec) {
 
             }
         };
         Surface cam  = null;
-        asuForia = new ASUForia(myPoseListen,bmpIn,cam);
+        asuForia = new ASUForia(new_PoseListen,bmpIn,cam);
+
     }
 
 
@@ -77,33 +78,12 @@ public class MainActivity extends AppCompatActivity {
      * A native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
      */
-    public static Bitmap getImage_from_C(byte[] imageBytes)
+    public static   Bitmap getImage_from_C(byte[] imageBytes)
     {
-        Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
-        Bitmap out=bmp.copy(bmp.getConfig(),true);
-        int width=bmp.getWidth();
-        int height=bmp.getHeight();
-        //Log.d("Is it Crashing", "NOOO ");
-        int[] pixels = new int[width*height];
-        //Log.d("Is it Crashing Now","MAYBE");
-        int [] pixels_new = new int[width*height];
-        int offset=0;
-        int stride = width;
+        byte[] check = imageBytes;
+        Bitmap out_1 = asuForia.onImageAvailable(check);
+        return out_1;
 
-        int w_1 = bmpIn.getWidth();
-        int h_1 = bmpIn.getHeight();
-        int str_1 = w_1;
-        int [] pixels_ref = new int [w_1*h_1];
-        bmpIn.getPixels(pixels_ref,offset,str_1,0,0,w_1,h_1);
-        //bmpIn.recycle();
-        bmp.getPixels(pixels,offset,stride,0,0,width,height);
-        bmp.recycle();
-
-        // byte [] image_out = new byte[imageBytes.length];
-        pixels_new=getImage(pixels,pixels_ref,width,height,w_1,h_1);
-        //Bitmap bmp1 =BitmapFactory.decodeByteArray(image_out,0,image_out.length);
-        out.setPixels(pixels_new,offset,stride,0,0,width,height);
-        return out;
 
     };
 
@@ -112,9 +92,10 @@ public class MainActivity extends AppCompatActivity {
     {
 
         super.onResume();
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inPreferredConfig = Bitmap.Config.ARGB_8888; // Each pixel is 4 bytes: Alpha, Red, Green, Blue
-        bmpIn = BitmapFactory.decodeResource(getResources(), R.drawable.vuforia, opts);
+        //    BitmapFactory.Options opts = new BitmapFactory.Options();
+        //    opts.inPreferredConfig = Bitmap.Config.ARGB_8888; // Each pixel is 4 bytes: Alpha, Red, Green, Blue
+        //    bmpIn = BitmapFactory.decodeResource(getResources(), R.drawable.vuforia, opts);
+        //asuForia.ImageAvailable();
     }
 
     @Override
@@ -124,5 +105,5 @@ public class MainActivity extends AppCompatActivity {
         int x=3;
     }
 
-    public static   native int[] getImage(int[] pixels, int[] pixels_ref , int imgW, int imgH, int w_1, int h_1);
+    //public static   native int[] getImage(int[] pixels, int[] pixels_ref , int imgW, int imgH, int w_1, int h_1);
 }
